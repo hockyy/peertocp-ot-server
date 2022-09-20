@@ -1,0 +1,27 @@
+{
+  "name": "peertocp-server",
+  "version": "1.0.0",
+  "description": "Peer To CP Codemirror Server",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hockyy/peertocp-server.git"
+  },
+  "author": "Hocky Yudhiono",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/hockyy/peertocp-server/issues"
+  },
+  "homepage": "https://github.com/hockyy/peertocp-server#readme",
+  "dependencies": {
+    "@codemirror/collab": "^6.0.0",
+    "@codemirror/state": "^6.1.1",
+    "codemirror": "^6.0.1",
+    "lib0": "^0.2.52",
+    "ws": "^8.8.1"
+  }
+}
