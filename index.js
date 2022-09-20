@@ -38,6 +38,7 @@ server.register("pushUpdates", (data) => {
       doc.updates.push({changes, clientID: update.clientID})
       doc.doc = changes.apply(doc.doc)
     }
+    server.emit('newUpdates')
     return true;
   }
 })
