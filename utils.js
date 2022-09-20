@@ -13,7 +13,7 @@ const wsReadyStateOpen = 1
 const wsReadyStateClosing = 2 // eslint-disable-line
 const wsReadyStateClosed = 3 // eslint-disable-line
 
-import {ChangeSet, Text} from "@codemirror/state"
+const {ChangeSet, Text} = "@codemirror/state"
 
 class Doc {
   constructor(docName) {
