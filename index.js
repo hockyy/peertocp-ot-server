@@ -1,35 +1,55 @@
-#!/usr/bin/env node
+const map = require('lib0/dist/map.cjs')
 
-/**
- * @type {any}
- */
-const WebSocket = require('ws')
-const http = require('http')
-const wss = new WebSocket.Server({ noServer: true })
-const setupWSConnection = require('./utils.js').setupWSConnection
+const WebSocketServer = require('rpc-websockets').Server
+const {ChangeSet, Text} = "@codemirror/state"
 
-const host = process.env.HOST || 'localhost'
-const port = process.env.PORT || 4443
-
-const server = http.createServer((request, response) => {
-  response.writeHead(200, { 'Content-Type': 'text/plain' })
-  response.end('okay')
-})
-
-wss.on('connection', setupWSConnection)
-
-server.on('upgrade', (request, socket, head) => {
-  // You may check auth of request here..
-  // See https://github.com/websockets/ws#client-authentication
-  /**
-   * @param {any} ws
-   */
-  const handleAuth = ws => {
-    wss.emit('connection', ws, request)
+class Doc {
+  constructor(docName) {
+    this.docName = docName
+    // The updates received so far (updates.length gives the current version)
+    this.updates = []
+    this.doc = Text.of([`Start document-${docName}`])
   }
-  wss.handleUpgrade(request, socket, head, handleAuth)
+}
+
+const docs = new Map()
+
+const getDoc = (docname) => map.setIfUndefined(docs, docname, () => {
+  const doc = new Doc(docname)
+  docs.set(docname, doc)
+  return doc
 })
 
-server.listen(port, host, () => {
-  console.log(`running at '${host}' on port ${port}`)
+const server = new WebSocketServer({
+  port: 4443,
+  host: 'localhost'
+})
+
+// data = {docName, version, updates}
+server.register("pushUpdates", (data) => {
+  const doc = getDoc(data.docName)
+  if (data.version !== doc.updates.length) {
+    return false;
+  } else {
+    for (let update of data.updates) {
+      // Convert the JSON representation to an actual ChangeSet
+      // instance
+      let changes = ChangeSet.fromJSON(update.changes)
+      doc.updates.push({changes, clientID: update.clientID})
+      doc.doc = changes.apply(doc.doc)
+    }
+    return true;
+  }
+})
+
+server.register("pullUpdates", (data) => {
+  const doc = getDoc(data.docName)
+  if (data.version < doc.updates.length) {
+    return doc.updates.slice(data.version)
+  }
+})
+
+server.register("getDocument", (data) => {
+  const doc = getDoc(data.docName)
+  return {version: doc.updates.length, doc: doc.toString()}
 })
