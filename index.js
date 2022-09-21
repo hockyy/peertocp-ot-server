@@ -14,6 +14,8 @@ class Doc {
 }
 
 const docs = new Map()
+const host = process.env.HOST || 'localhost'
+const port = process.env.PORT || 4443
 
 const getDoc = (docname) => map.setIfUndefined(docs, docname, () => {
   const doc = new Doc(docname)
@@ -21,34 +23,20 @@ const getDoc = (docname) => map.setIfUndefined(docs, docname, () => {
   return doc
 })
 
-const server = http.createServer((request, response) => {
-  response.writeHead(200, {'Content-Type': 'text/plain'})
-  response.end('okay')
-})
-
 const wss = new WebSocketServer({
-  noServer: true
+  host: host,
+  port: port
 })
 
-server.on('upgrade', (request, socket, head) => {
-  // You may check auth of request here..
-  // See https://github.com/websockets/ws#client-authentication
-  /**
-   * @param {any} ws
-   */
-  const handleAuth = ws => {
-    wss.wss.emit('connection', ws, request)
-  }
-  wss.wss.handleUpgrade(request, socket, head, handleAuth)
-})
+wss.event('newUpdates')
 
-wss.event("connection", e => {
-  console.log("OK", e)
+wss.on("listening", () => {
+  console.log(`listening at ${wss.wss.options.host}:${wss.wss.options.port}`)
 })
 
 // data = {docName, version, updates}
 wss.register("pushUpdates", (data) => {
-  console.log("Here")
+  console.log(data)
   const doc = getDoc(data.docName)
   if (data.version !== doc.updates.length) {
     wss.emit('newUpdates')
@@ -61,7 +49,6 @@ wss.register("pushUpdates", (data) => {
       doc.updates.push({changes, clientID: update.clientID})
       doc.doc = changes.apply(doc.doc)
     }
-    wss.emit('newUpdates')
     return true;
   }
 })
@@ -76,11 +63,4 @@ wss.register("pullUpdates", (data) => {
 wss.register("getDocument", (data) => {
   const doc = getDoc(data.docName)
   return {version: doc.updates.length, doc: doc.toString()}
-})
-
-const host = process.env.HOST || 'localhost'
-const port = process.env.PORT || 1234
-
-server.listen(port, host, () => {
-  console.log(`running at '${host}' on port ${port}`)
 })
