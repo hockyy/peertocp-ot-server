@@ -58,7 +58,7 @@ const getDoc = (docname) => map.setIfUndefined(docs, docname, () => {
     return namespace.clients.keys()
   })
   namespace.register("sendToPrivate", (data) => {
-    sendToPeer(data.toID, "private", data.message)
+    sendToPeer(data.toID, data.channel, data.message)
   })
   namespace.register("pushUpdates", (data, id) => {
     if (data.version !== doc.updates.length) {
