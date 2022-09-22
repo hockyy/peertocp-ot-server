@@ -9,6 +9,8 @@ class Doc {
     this.docName = docName
     // The updates received so far (updates.length gives the current version)
     this.updates = []
+    this.connections = new Set()
+    this.shellUpdates = []
     this.doc = Text.of([""])
   }
 }
@@ -37,8 +39,8 @@ wss.on("listening", () => {
 // data = {docName, version, updates}
 wss.register("pushUpdates", (data) => {
   const doc = getDoc(data.docName)
-  console.log(data.version, doc.updates.length)
   if (data.version !== doc.updates.length) {
+    wss.emit("newUpdates")
     return false;
   } else {
     for (let update of data.updates) {
@@ -53,12 +55,32 @@ wss.register("pushUpdates", (data) => {
   }
 })
 
+wss.register("pushShellUpdates", (data) => {
+  const doc = getDoc(data.docName)
+  if (data.shellVersion !== doc.shellUpdates.length) {
+    wss.emit("newUpdates")
+    return false;
+  } else {
+    Array.prototype.push.apply(doc.shellUpdates, data.shellUpdates)
+    wss.emit("newUpdates")
+    return true;
+  }
+})
+
 wss.register("pullUpdates", (data) => {
   const doc = getDoc(data.docName)
   console.log(data.version, doc.updates.length)
-  if (data.version < doc.updates.length) {
-    return doc.updates.slice(data.version)
+  let ret = {
+    updates: [],
+    shellUpdates: []
   }
+  if (data.version < doc.updates.length) {
+    ret.updates = doc.updates.slice(data.version);
+  }
+  if (data.shellVersion < doc.shellUpdates.length) {
+    ret.shellUpdates = doc.shellUpdates.slice(data.shellVersion)
+  }
+  return ret;
 })
 
 wss.register("getDocument", (data) => {
