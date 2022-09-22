@@ -11,9 +11,6 @@
 }
 {
   type: "shell.request"
-  fromID: clientID
-  toID: clientID
-  message: message
 }
 {
   type: "shell.compile"

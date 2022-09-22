@@ -3,14 +3,19 @@ const WebSocketServer = require('rpc-websockets').Server
 const {ChangeSet, Text} = require("@codemirror/state")
 const {uuidv4} = require("lib0/random");
 
+const idToDoc = new Map();
+
 class Doc {
-  constructor(docName, namespace) {
+  constructor(docName, namespace, notifyNewPeers, sendToPeer) {
     this.docName = docName
     // The updates received so far (updates.length gives the current version)
     this.updates = []
     this.namespace = namespace
     this.shellUpdates = []
     this.doc = Text.of([""])
+    this.peerInfo = new Map()
+    this.notifyNewPeers = notifyNewPeers
+    this.sendToPeer = sendToPeer
   }
 }
 
@@ -25,7 +30,34 @@ const wss = new WebSocketServer({
 
 const getDoc = (docname) => map.setIfUndefined(docs, docname, () => {
   const namespace = wss.of('/' + docname);
-  const doc = new Doc(docname, namespace)
+
+  namespace.register("sendToPrivate", (data) => {
+    sendToPeer(data.id, data.channel, data.message)
+  })
+
+  const broadcast = (channel, message = {}) => {
+    try {
+      const privateMessage = JSON.stringify({
+        "jsonrpc": "2.0",
+        "method": channel,
+        "params": message
+      })
+      for (client of namespace.clients().clients.values()) {
+        client.send(privateMessage)
+      }
+    } catch (e) {
+      console.log(e)
+      return false;
+    }
+  }
+
+  const notifyNewPeers = (id) => {
+    broadcast("newPeers")
+  }
+
+  const notifyNewUpdates = (id) => {
+    broadcast("newUpdates")
+  }
 
   const sendToPeer = (to, channel, message = {}) => {
     try {
@@ -45,30 +77,15 @@ const getDoc = (docname) => map.setIfUndefined(docs, docname, () => {
     }
   }
 
-  const broadcast = (channel, message = {}) => {
-    try {
-      const privateMessage = JSON.stringify({
-        "jsonrpc": "2.0",
-        "method": channel,
-        "params": message
-      })
-      for (client of namespace.clients().clients.values()) {
-        client.send(privateMessage)
-      }
-    } catch (e) {
-      console.log(e)
-      return false;
+  const doc = new Doc(docname, namespace, notifyNewPeers, sendToPeer)
+
+  namespace.register("getPeers", (_, id) => {
+    return {
+      selfid: id,
+      ids: Object.fromEntries(doc.peerInfo)
     }
-  }
-  const notifyNewUpdates = (id) => {
-    broadcast("newUpdates")
-  }
-  namespace.register("getPeers", () => {
-    return namespace.clients.keys()
   })
-  namespace.register("sendToPrivate", (data) => {
-    sendToPeer(data.toID, data.channel, data.message)
-  })
+
   namespace.register("pushUpdates", (data, id) => {
     if (data.version !== doc.updates.length) {
       notifyNewUpdates(id)
@@ -122,6 +139,22 @@ wss.on("listening", () => {
 wss.on("connection", (ws, msg) => {
   // console.log(ws)
   const docName = msg.url.slice(1)
-
+  idToDoc.set(ws._id, docName)
   const doc = getDoc(docName)
+  console.log(ws._id, msg.headers)
+  doc.peerInfo.set(ws._id, {
+    color: msg.headers.color,
+    colorlight: msg.headers.colorlight,
+    name: msg.headers.username
+  })
+  doc.notifyNewPeers()
+})
+
+wss.on("disconnection", (ws) => {
+
+  const docName = idToDoc.get(ws._id)
+  idToDoc.delete(ws._id)
+  const doc = getDoc(docName)
+  doc.peerInfo.delete(ws._id)
+  doc.notifyNewPeers()
 })
