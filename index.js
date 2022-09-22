@@ -141,7 +141,6 @@ wss.on("connection", (ws, msg) => {
   const docName = msg.url.slice(1)
   idToDoc.set(ws._id, docName)
   const doc = getDoc(docName)
-  console.log(ws._id, msg.headers)
   doc.peerInfo.set(ws._id, {
     color: msg.headers.color,
     colorlight: msg.headers.colorlight,
