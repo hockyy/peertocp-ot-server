@@ -25,16 +25,19 @@ const wss = new WebSocketServer({
 })
 
 const getDoc = (docname) => map.setIfUndefined(docs, docname, () => {
-  const namespace = '/' + docname;
-  const doc = new Doc(docname, wss.namespaces[namespace])
-  wss.event('newUpdates', namespace)
-  wss.event('newPeers', namespace)
-  wss.register("getPeers", () => {
+  const namespaceObj = wss.of('/' + docname);
+  const doc = new Doc(docname, namespaceObj)
+  namespaceObj.event('newUpdates')
+  namespaceObj.event('newPeers')
+  namespaceObj.register("getPeers", () => {
     return doc.namespace.clients.keys()
-  }, namespace)
+  })
 
-  wss.register("pushUpdates", (data) => {
+  namespaceObj.register("pushUpdates", (data) => {
+    // console.log(data)
     if (data.version !== doc.updates.length) {
+      // console.log("emitting", docname)
+      // console.log(doc.namespace.clients())
       doc.namespace.emit("newUpdates")
       return false;
     } else {
@@ -48,9 +51,9 @@ const getDoc = (docname) => map.setIfUndefined(docs, docname, () => {
       doc.namespace.emit("newUpdates")
       return true;
     }
-  }, namespace)
+  })
 
-  wss.register("pushShellUpdates", (data) => {
+  namespaceObj.register("pushShellUpdates", (data) => {
     const doc = getDoc(data.docName)
     if (data.shellVersion !== doc.shellUpdates.length) {
       doc.namespace.emit("newUpdates")
@@ -60,9 +63,9 @@ const getDoc = (docname) => map.setIfUndefined(docs, docname, () => {
       doc.namespace.emit("newUpdates")
       return true;
     }
-  }, namespace)
+  })
 
-  wss.register("pullUpdates", (data) => {
+  namespaceObj.register("pullUpdates", (data) => {
     console.log(data.version, doc.updates.length)
     let ret = {
       updates: [],
@@ -75,7 +78,7 @@ const getDoc = (docname) => map.setIfUndefined(docs, docname, () => {
       ret.shellUpdates = doc.shellUpdates.slice(data.shellVersion)
     }
     return ret;
-  }, namespace)
+  })
 
   return doc
 })
@@ -87,5 +90,7 @@ wss.on("listening", () => {
 wss.on("connection", (ws, msg) => {
   // console.log(ws)
   const docName = msg.url.slice(1)
-  getDoc(docName)
+
+  const doc = getDoc(docName)
+  console.log(doc.namespace)
 })
