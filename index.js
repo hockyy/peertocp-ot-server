@@ -25,20 +25,20 @@ const wss = new WebSocketServer({
 })
 
 const getDoc = (docname) => map.setIfUndefined(docs, docname, () => {
-  const namespaceObj = wss.of('/' + docname);
-  const doc = new Doc(docname, namespaceObj)
-  namespaceObj.event('newUpdates')
-  namespaceObj.event('newPeers')
-  namespaceObj.register("getPeers", () => {
-    return doc.namespace.clients.keys()
+  const namespace = wss.of('/' + docname);
+  const doc = new Doc(docname, namespace)
+  namespace.event('newUpdates')
+  namespace.event('newPeers')
+  namespace.register("getPeers", () => {
+    return namespace.clients.keys()
   })
 
-  namespaceObj.register("pushUpdates", (data) => {
+  namespace.register("pushUpdates", (data) => {
     // console.log(data)
     if (data.version !== doc.updates.length) {
       // console.log("emitting", docname)
-      // console.log(doc.namespace.clients())
-      doc.namespace.emit("newUpdates")
+      // console.log(namespace.clients())
+      namespace.emit("newUpdates")
       return false;
     } else {
       for (let update of data.updates) {
@@ -48,24 +48,24 @@ const getDoc = (docname) => map.setIfUndefined(docs, docname, () => {
         doc.updates.push({changes, clientID: update.clientID})
         doc.doc = changes.apply(doc.doc)
       }
-      doc.namespace.emit("newUpdates")
+      namespace.emit("newUpdates")
       return true;
     }
   })
 
-  namespaceObj.register("pushShellUpdates", (data) => {
+  namespace.register("pushShellUpdates", (data) => {
     const doc = getDoc(data.docName)
     if (data.shellVersion !== doc.shellUpdates.length) {
-      doc.namespace.emit("newUpdates")
+      namespace.emit("newUpdates")
       return false;
     } else {
       Array.prototype.push.apply(doc.shellUpdates, data.shellUpdates)
-      doc.namespace.emit("newUpdates")
+      namespace.emit("newUpdates")
       return true;
     }
   })
 
-  namespaceObj.register("pullUpdates", (data) => {
+  namespace.register("pullUpdates", (data) => {
     console.log(data.version, doc.updates.length)
     let ret = {
       updates: [],
@@ -92,5 +92,4 @@ wss.on("connection", (ws, msg) => {
   const docName = msg.url.slice(1)
 
   const doc = getDoc(docName)
-  console.log(doc.namespace)
 })
