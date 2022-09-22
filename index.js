@@ -29,11 +29,11 @@ const getDoc = (docname) => map.setIfUndefined(docs, docname, () => {
 
   const sendToPeer = (to, channel, message = {}) => {
     try {
-      const privateMessage = {
+      const privateMessage = JSON.stringify({
         "jsonrpc": "2.0",
         "method": channel,
         "params": message
-      }
+      })
       // console.log(namespace.clients().clients.get(to))
       namespace.clients().clients.get(to).send(
           JSON.stringify(privateMessage)
@@ -44,8 +44,24 @@ const getDoc = (docname) => map.setIfUndefined(docs, docname, () => {
       return false;
     }
   }
+
+  const broadcast = (channel, message = {}) => {
+    try {
+      const privateMessage = JSON.stringify({
+        "jsonrpc": "2.0",
+        "method": channel,
+        "params": message
+      })
+      for (client of namespace.clients().clients.values()) {
+        client.send(privateMessage)
+      }
+    } catch (e) {
+      console.log(e)
+      return false;
+    }
+  }
   const notifyNewUpdates = (id) => {
-    sendToPeer(id, "newUpdates")
+    broadcast("newUpdates")
   }
   namespace.register("getPeers", () => {
     return namespace.clients.keys()
