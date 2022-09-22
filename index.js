@@ -1,8 +1,7 @@
 const map = require('lib0/dist/map.cjs')
-
-const http = require('http')
 const WebSocketServer = require('rpc-websockets').Server
 const {ChangeSet, Text} = require("@codemirror/state")
+const {uuidv4} = require("lib0/random");
 
 class Doc {
   constructor(docName, namespace) {
@@ -24,21 +23,46 @@ const wss = new WebSocketServer({
   port: port
 })
 
+const tmp = {
+  "jsonrpc": "2.0",
+  "method": "private",
+  "params": [42, 23],
+  "id": uuidv4()
+}
+
 const getDoc = (docname) => map.setIfUndefined(docs, docname, () => {
   const namespace = wss.of('/' + docname);
   const doc = new Doc(docname, namespace)
-  namespace.event('newUpdates')
-  namespace.event('newPeers')
+
+  const sendToPeer = (to, channel, message = {}) => {
+    try {
+      const privateMessage = {
+        "jsonrpc": "2.0",
+        "method": channel,
+        "params": message
+      }
+      // console.log(namespace.clients().clients.get(to))
+      namespace.clients().clients.get(to).send(
+          JSON.stringify(privateMessage)
+      )
+      return true;
+    } catch (e) {
+      console.log(e)
+      return false;
+    }
+  }
+  const notifyNewUpdates = (id) => {
+    sendToPeer(id, "newUpdates")
+  }
   namespace.register("getPeers", () => {
     return namespace.clients.keys()
   })
-
-  namespace.register("pushUpdates", (data) => {
-    // console.log(data)
+  namespace.register("sendToPrivate", (data) => {
+    sendToPeer(data.toID, "private", data.message)
+  })
+  namespace.register("pushUpdates", (data, id) => {
     if (data.version !== doc.updates.length) {
-      // console.log("emitting", docname)
-      // console.log(namespace.clients())
-      namespace.emit("newUpdates")
+      notifyNewUpdates(id)
       return false;
     } else {
       for (let update of data.updates) {
@@ -48,7 +72,7 @@ const getDoc = (docname) => map.setIfUndefined(docs, docname, () => {
         doc.updates.push({changes, clientID: update.clientID})
         doc.doc = changes.apply(doc.doc)
       }
-      namespace.emit("newUpdates")
+      notifyNewUpdates(id)
       return true;
     }
   })
@@ -56,17 +80,16 @@ const getDoc = (docname) => map.setIfUndefined(docs, docname, () => {
   namespace.register("pushShellUpdates", (data) => {
     const doc = getDoc(data.docName)
     if (data.shellVersion !== doc.shellUpdates.length) {
-      namespace.emit("newUpdates")
+      notifyNewUpdates(id)
       return false;
     } else {
       Array.prototype.push.apply(doc.shellUpdates, data.shellUpdates)
-      namespace.emit("newUpdates")
+      notifyNewUpdates(id)
       return true;
     }
   })
 
   namespace.register("pullUpdates", (data) => {
-    console.log(data.version, doc.updates.length)
     let ret = {
       updates: [],
       shellUpdates: []
