@@ -23,13 +23,6 @@ const wss = new WebSocketServer({
   port: port
 })
 
-const tmp = {
-  "jsonrpc": "2.0",
-  "method": "private",
-  "params": [42, 23],
-  "id": uuidv4()
-}
-
 const getDoc = (docname) => map.setIfUndefined(docs, docname, () => {
   const namespace = wss.of('/' + docname);
   const doc = new Doc(docname, namespace)
