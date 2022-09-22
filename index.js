@@ -36,10 +36,9 @@ wss.on("listening", () => {
 
 // data = {docName, version, updates}
 wss.register("pushUpdates", (data) => {
-  console.log(data)
   const doc = getDoc(data.docName)
+  console.log(data.version, doc.updates.length)
   if (data.version !== doc.updates.length) {
-    wss.emit('newUpdates')
     return false;
   } else {
     for (let update of data.updates) {
@@ -49,12 +48,14 @@ wss.register("pushUpdates", (data) => {
       doc.updates.push({changes, clientID: update.clientID})
       doc.doc = changes.apply(doc.doc)
     }
+    wss.emit("newUpdates")
     return true;
   }
 })
 
 wss.register("pullUpdates", (data) => {
   const doc = getDoc(data.docName)
+  console.log(data.version, doc.updates.length)
   if (data.version < doc.updates.length) {
     return doc.updates.slice(data.version)
   }
