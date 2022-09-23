@@ -129,6 +129,10 @@ const getDoc = (docname) => map.setIfUndefined(docs, docname, () => {
     return ret;
   })
 
+  namespace.register("ping", () => {
+    return true;
+  })
+
   return doc
 })
 
