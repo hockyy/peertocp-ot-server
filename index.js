@@ -2,6 +2,7 @@ const map = require('lib0/dist/map.cjs')
 const WebSocketServer = require('rpc-websockets').Server
 const {ChangeSet, Text} = require("@codemirror/state")
 const http = require("http")
+const {uuidv4} = require("lib0/random");
 
 const idToDoc = new Map();
 
@@ -36,7 +37,9 @@ const getDoc = (docname) => map.setIfUndefined(docs, docname, () => {
   const namespace = wss.of('/' + docname);
 
   namespace.register("sendToPrivate", (data) => {
-    sendToPeer(data.id, data.channel, data.message)
+    console.log(data)
+    sendToPeer(data.to, data.channel, data.message)
+    return true;
   })
 
   const broadcast = (channel, message = {}) => {
@@ -70,10 +73,7 @@ const getDoc = (docname) => map.setIfUndefined(docs, docname, () => {
         "method": channel,
         "params": message
       })
-      // console.log(namespace.clients().clients.get(to))
-      namespace.clients().clients.get(to).send(
-          JSON.stringify(privateMessage)
-      )
+      namespace.clients().clients.get(to).send(privateMessage)
       return true;
     } catch (e) {
       console.log(e)
