@@ -1,7 +1,7 @@
 const map = require('lib0/dist/map.cjs')
 const WebSocketServer = require('rpc-websockets').Server
 const {ChangeSet, Text} = require("@codemirror/state")
-const {uuidv4} = require("lib0/random");
+const http = require("http")
 
 const idToDoc = new Map();
 
@@ -23,9 +23,13 @@ const docs = new Map()
 const host = process.env.HOST || 'localhost'
 const port = process.env.PORT || 4443
 
+const server = http.createServer((request, response) => {
+  response.writeHead(200, { 'Content-Type': 'text/plain' })
+  response.end('okay')
+})
+
 const wss = new WebSocketServer({
-  host: host,
-  port: port
+  noServer: true
 })
 
 const getDoc = (docname) => map.setIfUndefined(docs, docname, () => {
@@ -161,3 +165,19 @@ wss.on("disconnection", (ws) => {
   doc.peerInfo.delete(ws._id)
   doc.notifyNewPeers()
 })
+
+
+server.on('upgrade', (request, socket, head) => {
+  // You may check auth of request here..
+  /**
+   * @param {any} ws
+   */
+  const handleAuth = ws => {
+    wss.wss.emit('connection', ws, request)
+  }
+  wss.wss.handleUpgrade(request, socket, head, handleAuth)
+})
+
+server.listen(port)
+
+console.log('Signaling server running on localhost:', port)
