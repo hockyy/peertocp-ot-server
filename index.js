@@ -37,7 +37,6 @@ const getDoc = (docname) => map.setIfUndefined(docs, docname, () => {
   const namespace = wss.of('/' + docname);
 
   namespace.register("sendToPrivate", (data) => {
-    console.log(data)
     sendToPeer(data.to, data.channel, data.message)
     return true;
   })
@@ -53,16 +52,15 @@ const getDoc = (docname) => map.setIfUndefined(docs, docname, () => {
         client.send(privateMessage)
       }
     } catch (e) {
-      console.log(e)
       return false;
     }
   }
 
-  const notifyNewPeers = (id) => {
+  const notifyNewPeers = () => {
     broadcast("newPeers")
   }
 
-  const notifyNewUpdates = (id) => {
+  const notifyNewUpdates = () => {
     broadcast("newUpdates")
   }
 
@@ -76,7 +74,6 @@ const getDoc = (docname) => map.setIfUndefined(docs, docname, () => {
       namespace.clients().clients.get(to).send(privateMessage)
       return true;
     } catch (e) {
-      console.log(e)
       return false;
     }
   }
@@ -92,7 +89,7 @@ const getDoc = (docname) => map.setIfUndefined(docs, docname, () => {
 
   namespace.register("pushUpdates", (data, id) => {
     if (data.version !== doc.updates.length) {
-      notifyNewUpdates(id)
+      notifyNewUpdates()
       return false;
     } else {
       for (let update of data.updates) {
@@ -102,19 +99,18 @@ const getDoc = (docname) => map.setIfUndefined(docs, docname, () => {
         doc.updates.push({changes, clientID: update.clientID})
         doc.doc = changes.apply(doc.doc)
       }
-      notifyNewUpdates(id)
+      notifyNewUpdates()
       return true;
     }
   })
 
-  namespace.register("pushShellUpdates", (data) => {
-    const doc = getDoc(data.docName)
+  namespace.register("pushShellUpdates", (data, id) => {
     if (data.shellVersion !== doc.shellUpdates.length) {
-      notifyNewUpdates(id)
+      notifyNewUpdates()
       return false;
     } else {
       Array.prototype.push.apply(doc.shellUpdates, data.shellUpdates)
-      notifyNewUpdates(id)
+      notifyNewUpdates()
       return true;
     }
   })
@@ -145,7 +141,6 @@ wss.on("listening", () => {
 })
 
 wss.on("connection", (ws, msg) => {
-  // console.log(ws)
   const docName = msg.url.slice(1)
   idToDoc.set(ws._id, docName)
   const doc = getDoc(docName)
@@ -179,5 +174,3 @@ server.on('upgrade', (request, socket, head) => {
 })
 
 server.listen(port)
-
-console.log('Signaling server running on localhost:', port)
