@@ -22,7 +22,7 @@ class Doc {
 
 const docs = new Map()
 const host = process.env.HOST || 'localhost'
-const port = process.env.PORT || 4443
+const port = process.env.PORT || 3000
 
 const server = http.createServer((request, response) => {
   response.writeHead(200, { 'Content-Type': 'text/plain' })
@@ -173,4 +173,6 @@ server.on('upgrade', (request, socket, head) => {
   wss.wss.handleUpgrade(request, socket, head, handleAuth)
 })
 
-server.listen(port)
+server.listen(port, host, () => {
+  console.log(`running at '${host}' on port ${port}`)
+})
