@@ -89,7 +89,6 @@ const getDoc = (docname) => map.setIfUndefined(docs, docname, () => {
 
   namespace.register("pushUpdates", (data, id) => {
     if (data.version !== doc.updates.length) {
-      notifyNewUpdates()
       return false;
     } else {
       for (let update of data.updates) {
