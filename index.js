@@ -105,7 +105,6 @@ const getDoc = (docname) => map.setIfUndefined(docs, docname, () => {
 
   namespace.register("pushShellUpdates", (data, id) => {
     if (data.shellVersion !== doc.shellUpdates.length) {
-      notifyNewUpdates()
       return false;
     } else {
       Array.prototype.push.apply(doc.shellUpdates, data.shellUpdates)
