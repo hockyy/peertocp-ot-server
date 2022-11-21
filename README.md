@@ -1,25 +1,3 @@
-```js
-{
-  type: "shell.spawn"
-  clientID: clientID
-  shellID: shellID
-}
-{
-  type: "shell.info"
-  shellID: shellID
-  message: message
-}
-{
-  type: "shell.request"
-}
-{
-  type: "shell.compile"
-  toID: clientID
-  message: message
-}
-{
-  type: "shell.keystroke"
-  toID: clientID
-  keystroke: keystroke
-}
-```
+# PeerToCP Operational Transformation Server
+
+Please refer to [this repository](https://github.com/hockyy/peertocp) for running guide. 
